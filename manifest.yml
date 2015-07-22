@@ -1,0 +1,8 @@
+applications:
+- disk_quota: 1024M
+  host: javadrdahellogalaxy
+  name: Java DRDA Hello Galaxy
+  path: java_drda_HelloGalaxy.war
+  domain: stage1.mybluemix.net
+  instances: 1
+  memory: 512M
