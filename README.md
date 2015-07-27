@@ -4,7 +4,7 @@
 
 ###Relevant files:
 
-####src/com/ibm/informix/java_drda_HelloWorld.java
+####src/com/ibm/informix/java_drda_HelloGalaxy.java
 
 This file contains all of the sample data interacting with the database.
 
