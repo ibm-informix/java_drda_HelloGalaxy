@@ -1,8 +1,10 @@
-/*-
- * Java Sample Application: Connection to Informix using DRDA
- */
+package com.ibm.informix;
 
-/*-
+/**
+ * Java Sample Application: Connection to Informix using DRDA
+ **/
+
+/**
  * Topics
  * 1 Create table 
  * 2 Inserts
@@ -24,9 +26,8 @@
  * 7.1 Count
  * 7.2 Distinct
  * 8 Drop a table
- */
+ **/
 
-package com.ibm.informix;
 import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -46,7 +47,14 @@ import com.ibm.db2.jcc.DB2Driver;
 
 public class java_drda_HelloGalaxy {
 
-	public static String DRDAURL;// = "jdbc:ids://yourURL:port/db:user=username;password=password;";
+	// To run locally, set the URL here
+	// For example: URL = "jdbc:db2://localhost:9090/testdb:user=myuser;password=mypassword;";
+	public static String URL = "";
+		
+	// Service name for if credentials are parsed out of the Bluemix VCAP_SERVICES
+	public static String SERVICE_NAME = "timeseriesdatabase";
+	public static boolean USE_SSL = false;
+	
 	public static List<String> everything = new ArrayList<String>();
 	
 	public static final City kansasCity = new City("Kansas City", 467007, 39.0997, 94.5783, 1);
@@ -59,37 +67,32 @@ public class java_drda_HelloGalaxy {
 	public static final City sydney = new City("Sydney", 4293000, -33.8651, -151.2094, 61);
 		
 	public static void main(String[] args) {
-		// connect to bluemix
-		// if (args[0] != null)
-		// DRDAURL = args[0];
-		// else
-		// parseVcap();
-
 		doEverything();
 
-		// print log
-		for (String s : everything)
+		for (String s : everything) {
 			System.out.println(s);
-
+		}
 	}
 
 	public static List<String> doEverything() {
-		parseVcap();
+		everything.clear();
+		
+		Connection conn = null;
 		try {
 
+			parseVcap();
 			// initialize some variables
 			String tableName = "cities";
 			String sql = "";
 			List<String> output = new ArrayList<String>();
 			PreparedStatement statement = null;
 			Properties prop = new Properties();
-			Connection conn;
 			// <------------------------------------->
 
 			// connect to database
-			conn = new DB2Driver().connect(DRDAURL, prop);
+			conn = new DB2Driver().connect(URL, prop);
 			if (conn != null)
-				everything.add("Connected to: " + DRDAURL);
+				everything.add("Connected to: " + URL);
 			// <------------------------------------->
 
 			everything.add("\nTopics");
@@ -542,30 +545,55 @@ public class java_drda_HelloGalaxy {
 			everything.add("\nComplete!");
 
 		} catch (Exception e) {
-			System.err.println("[ERROR] "
-					+ (e instanceof SQLException ? " Error Code : "
-							+ ((SQLException) e).getErrorCode() : "")
-					+ " Message : " + e.getMessage());
-			e.printStackTrace();
-		}
+        	String errMessage = "[ERROR] "
+                    + (e instanceof SQLException ? " Error Code : "
+                            + ((SQLException) e).getErrorCode() : "")
+                    + " Message : " + e.getMessage();
+        	everything.add(errMessage);
+            System.err.println(errMessage);
+            e.printStackTrace();
+        } finally {
+        	if (conn != null) {
+        		try {
+        			conn.close();
+        		} catch (SQLException e) {
+        			
+        		}
+        	}
+        }
 		return everything;
 	}
 
-	public static void parseVcap() {
-		String serviceName = "timeseriesdatabase";
-		StringReader stringReader = new StringReader(
-				System.getenv("VCAP_SERVICES"));
+	public static void parseVcap() throws Exception {
+		if (URL != null && !URL.equals("")) {
+			// If URL is already set, use it as is
+			return;
+		}
+ 
+		// Otherwise parse URL and credentials from VCAP_SERVICES
+		String serviceName = System.getenv("SERVICE_NAME");
+		if(serviceName == null || serviceName.length() == 0) {
+			serviceName = SERVICE_NAME;
+		}
+		String vcapServices = System.getenv("VCAP_SERVICES");
+		if (vcapServices == null) {
+			throw new Exception("VCAP_SERVICES not found in the environment"); 
+		}
+		StringReader stringReader = new StringReader(vcapServices);
 		JsonReader jsonReader = Json.createReader(stringReader);
 		JsonObject vcap = jsonReader.readObject();
 		System.out.println("vcap: " + vcap);
-		boolean ssl = false;
-		if (ssl)
-			DRDAURL = vcap.getJsonArray(serviceName).getJsonObject(0)
+		if (vcap.getJsonArray(serviceName) == null) {
+			throw new Exception("Service " + serviceName + " not found in VCAP_SERVICES");
+		}
+		if (USE_SSL) {
+			URL = vcap.getJsonArray(serviceName).getJsonObject(0)
 					.getJsonObject("credentials").getString("java_drda_url_ssl");
-		else
-			DRDAURL = vcap.getJsonArray(serviceName).getJsonObject(0)
+		} else {
+			URL = vcap.getJsonArray(serviceName).getJsonObject(0)
 					.getJsonObject("credentials").getString("java_drda_url");
-		System.out.println(DRDAURL);
+		}
+		System.out.println(URL);
 	}
 
 }
